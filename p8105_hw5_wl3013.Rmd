@@ -46,6 +46,7 @@ plot(
   main = "Birthday Problem Simulation (10,000 runs)"
 )
 ```
+
 The probability plot shows a smoothly increasing "S" line, indicating that when the group size grows, the probability of at least two people share a birthday also grows. When the group size close to the the maximum group size (n=50), the probability close to 1.
 
 
@@ -99,7 +100,9 @@ ggplot(power_df, aes(x = mu_true, y = power)) +
   ylim(0, 1) +
   theme_minimal()
 ```
-comments:
+
+The plot shows that statistical power increases as the true mean moves further from 0. When the effect size is small (mu near 0), the t-test rarely rejects the null hypothesis. As mu increases, the probability of detecting a true difference rises sharply, approaching 1 when mu ≥ 5.
+
 
 ### Create plot 2
 
@@ -119,16 +122,21 @@ avg_reject <- all_res |>
 avg_df <- left_join(avg_all, avg_reject, by = "mu_true")
 
 ggplot(avg_df, aes(x = mu_true)) +
-  geom_line(aes(y = mu_hat_avg), color = "steelblue", linewidth = 1) +
-  geom_point(aes(y = mu_hat_avg), color = "steelblue") +
-  geom_line(aes(y = mu_hat_reject_avg), color = "firebrick", linewidth = 1) +
-  geom_point(aes(y = mu_hat_reject_avg), color = "firebrick") +
+  geom_line(aes(y = mu_hat_avg, color = "All samples"), linewidth = 1) +
+  geom_point(aes(y = mu_hat_avg, color = "All samples")) +
+  geom_line(aes(y = mu_hat_reject_avg, color = "Rejected H0 (p < 0.05)"), linewidth = 1) +
+  geom_point(aes(y = mu_hat_reject_avg, color = "Rejected H0 (p < 0.05)")) +
   labs(
-    x = "True mean (mu)",
-    y = "Average estimated mean",
-    title = "Estimated mean vs true mean"
+    x = "True mean (μ)",
+    y = "Average estimated mean (μ̂)",
+    title = "Estimated Mean vs True Mean",
+    color = "Sample Type"
   ) +
-  theme_minimal()
+  theme_minimal() +
+  scale_color_manual(values = c("All samples" = "steelblue",
+                                "Rejected H0 (p < 0.05)" = "firebrick"))
 
 ```
-comments:
+
+The blue line represents the average estimated mean across all samples, which closely matches the true mean, showing that the estimator is unbiased overall. The red line represents the only among samples where the null was rejected (p < 0.05). These estimates are systematically higher than the true mu, reflecting selection bias. Which means significant results tend to come from samples where random variation exaggerated the effect.
+Besides, the difference between the two curves is largest when power is low (small mu), because only extreme positive samples yield significant results. As mu increases and the test becomes more powerful, nearly all samples reject H0, reducing selection bias and bringing the two averages closer together.
