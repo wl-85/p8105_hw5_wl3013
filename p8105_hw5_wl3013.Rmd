@@ -10,6 +10,8 @@ library(tidyverse)
 library(rvest)
 library(broom)
 library(purrr)
+library(readr)
+library(ggplot2)
 ```
 
 
@@ -140,3 +142,64 @@ ggplot(avg_df, aes(x = mu_true)) +
 
 The blue line represents the average estimated mean across all samples, which closely matches the true mean, showing that the estimator is unbiased overall. The red line represents the only among samples where the null was rejected (p < 0.05). These estimates are systematically higher than the true mu, reflecting selection bias. Which means significant results tend to come from samples where random variation exaggerated the effect.
 Besides, the difference between the two curves is largest when power is low (small mu), because only extreme positive samples yield significant results. As mu increases and the test becomes more powerful, nearly all samples reject H0, reducing selection bias and bringing the two averages closer together.
+
+
+
+## Problem 3
+
+```{r}
+# Import data
+homicide_df <- read_csv("https://raw.githubusercontent.com/washingtonpost/data-homicides/refs/heads/master/homicide-data.csv")
+
+# Create city_state variable and summary
+homicide_summary <- homicide_df |>
+  mutate(
+    city_state = paste(city, state, sep = ", "),
+    unsolved = if_else(
+      disposition %in% c("Closed without arrest", "Open/No arrest"),
+      1, 0
+    )
+  ) |>
+  group_by(city_state) |>
+  summarise(
+    total_homicides = n(),
+    unsolved_homicides = sum(unsolved),
+    .groups = "drop"
+  )
+
+# Run the prop.test for Baltimore
+baltimore <- homicide_summary |> filter(city_state == "Baltimore, MD")
+baltimore_test <- prop.test(baltimore$unsolved_homicides,
+                            baltimore$total_homicides)
+broom::tidy(baltimore_test)
+
+# Write function for running prop.test for all cities
+run_prop_test <- function(x, n) {
+  # x = number of unsolved homicides
+  # n = total number of homicides
+  test_result <- prop.test(x = x, n = n)
+  tidy_result <- broom::tidy(test_result)
+  return(tidy_result)
+}
+
+# Run the function and get the prop.test results for all cities
+city_prop_test <- homicide_summary |>
+  mutate(result = map2(unsolved_homicides, total_homicides, run_prop_test)) |>
+  unnest(result)
+
+# Create the plot
+ggplot(city_prop_test,
+       aes(x = reorder(city_state, estimate), y = estimate)) +
+  geom_point() +
+  geom_errorbar(
+    aes(ymin = conf.low, ymax = conf.high),
+    width = 0.2
+  ) +
+  coord_flip() +
+  labs(
+    x = NULL,
+    y = "Proportion of unsolved homicides",
+    title = "Unsolved homicide proportion and 95% CI by city"
+  )
+```
+
